@@ -1,3 +1,7 @@
+このプロジェクトは、以下のチュートリアルを参考に作成しました。 
+Qiita: 【初心者完全版】0からDockerをフルスタックアプリを開発しながら学べるチュートリアル
+https://qiita.com/Sicut_study/items/fd8e8a9fe05631fc5ca8
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
