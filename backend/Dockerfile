@@ -12,4 +12,5 @@ EXPOSE 3000
 # CMD ["npm", "run", "start"] 
 
 # 修正後
-CMD npx prisma migrate deploy && npm run start
+# backend/Dockerfile またはルートの Dockerfile
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
