@@ -1,16 +1,12 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors"; // 追加
+import { PrismaClient } from '@prisma/client'
 
-interface Todo {
-  id: number;
-  title: string;
-  completed: boolean;
-}
 
-const todos: Todo[] = [];
 
 const app = new Hono();
+const prisma = new PrismaClient();
 
 // 追加
 app.use(
@@ -19,35 +15,34 @@ app.use(
   })
 );
 
-app.get("/", (c) => {
-  return c.text("Hello Hono!");
-});
-
-app.get("/todos", (c) => {
+app.get("/todos", async (c) => {
+  const todos = await prisma.todo.findMany({
+    orderBy: { id: 'asc' }
+  })
   return c.json({ todos });
 });
 
 app.post("/todos", async (c) => {
   const { title } = await c.req.json();
-  const todo: Todo = {
-    id: todos.length + 1,
-    title,
-    completed: false,
-  };
-  todos.push(todo);
-  return c.json({ todo });
+  const newTodo = await prisma.todo.create({
+    data: {
+      title,
+      completed: false,
+    }
+  })
+  return c.json(newTodo );
+})
+app.put("/todos/:id", async (c) => {
+  const id  =Number(c.req.param("id"));
+  const { completed } = await c.req.json();
+  const updatedTodo = await prisma.todo.update({
+    where: { id },
+    data: { completed },
+  });
+  return c.json(updatedTodo);
 });
 
-app.put("/todos/:id", async (c) => {
-  const { id } = c.req.param();
-  const { completed } = await c.req.json();
-  const todo = todos.find((todo) => todo.id === Number(id));
-  if (!todo) {
-    return c.notFound();
-  }
-  todo.completed = completed;
-  return c.json({ todo });
-});
+export default app;
 
 serve(
   {

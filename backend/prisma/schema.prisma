@@ -1,0 +1,15 @@
+// backend/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // これを復活させる
+}
+
+model Todo {
+  id        Int     @id @default(autoincrement())
+  title     String
+  completed Boolean @default(false)
+}
