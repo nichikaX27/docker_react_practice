@@ -8,8 +8,11 @@ import { PrismaClient } from '@prisma/client'
 const app = new Hono();
 const prisma = new PrismaClient();
 
-
 app.use(cors({ origin: "*" }));
+
+app.get("/", (c) => {
+  return c.text("Hello Hono!");
+});
 
 app.get("/todos", async (c) => {
   const todos = await prisma.todo.findMany({

@@ -8,4 +8,8 @@ RUN npm install
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+# 修正前
+# CMD ["npm", "run", "start"] 
+
+# 修正後
+CMD npx prisma migrate deploy && npm run start
