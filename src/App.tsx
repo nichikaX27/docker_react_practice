@@ -15,7 +15,7 @@ function App() {
   }, []);
 
   const fetchTodos = async () => {
-    const response = await fetch("http://localhost:3000/todos");
+    const response = await fetch("https://docker-react-practice.onrender.com/todos");
     const data = await response.json();
     setTodos(data.todos);
   };
@@ -23,7 +23,7 @@ function App() {
   const handleAddTodo =  async () => {
     if (title.trim()) {
       try{
-        const response = await fetch("http://localhost:3000/todos", {
+        const response = await fetch("https://docker-react-practice.onrender.com/todos", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -42,7 +42,7 @@ function App() {
 
   const handleToggleTodo =  async (id: number, completed: boolean) => {
     try{
-      const response = await fetch(`http://localhost:3000/todos/${id}`, {
+      const response = await fetch(`https://docker-react-practice.onrender.com/todos/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
