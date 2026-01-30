@@ -9,12 +9,7 @@ const app = new Hono();
 const prisma = new PrismaClient();
 
 
-// 追加
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-  })
-);
+app.use(cors({ origin: "*" }));
 
 app.get("/todos", async (c) => {
   const todos = await prisma.todo.findMany({
