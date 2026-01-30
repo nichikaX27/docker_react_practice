@@ -1,36 +1,30 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+interface Todo {
+  id: number;
+  title: string;
+  completed: boolean;
+};
 
 function App() {
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [title, setTitle] = useState("");
-  const [todos, setTodos] = useState([
-    {
-      id: 1,
-      title: "Todo 1",
-      completed: false,
-    },
-    {
-      id: 2,
-      title: "Todo 2",
-      completed: false,
-    },
-    {
-      id: 3,
-      title: "Todo 3",
-      completed: false,
-    },
-  ]);
+
+  useEffect(() => {
+    fetchTodos();
+  }, []);
+
+  const fetchTodos = async () => {
+    const response = await fetch("http://localhost:3000/todos");
+    const data = await response.json();
+    setTodos(data.todos);
+  };
 
   const handleAddTodo = () => {
-    setTodos([
-      ...todos,
-      {
-        id: todos.length + 1,
-        title: title,
-        completed: false,
-      },
-    ]);
-
-    setTitle("");
+    if (title.trim()) {
+      setTodos([...todos, { id: todos.length + 1, title, completed: false }]);
+      setTitle("");
+    }
   };
 
   const handleToggleTodo = (id: number) => {
@@ -66,6 +60,7 @@ function App() {
               追加
             </button>
           </div>
+
           {todos.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
               <p className="text-lg">タスクがありません</p>
@@ -117,4 +112,3 @@ function App() {
 }
 
 export default App;
-
