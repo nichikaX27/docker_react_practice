@@ -73,7 +73,7 @@ function App() {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="新しいタスクを入力..."
               aria-label="新しいタスクを入力"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             />
             <button
               onClick={handleAddTodo}
