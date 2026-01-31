@@ -41,6 +41,19 @@ app.put("/todos/:id", async (c) => {
   return c.json(updatedTodo);
 });
 
+app.delete("/todos/:id", async (c) => {
+  const id  =Number(c.req.param("id"));
+  try{
+    await prisma.todo.delete({
+      where: { id },
+    });
+    return c.json({ message: "Todo deleted successfully" });
+  } catch (error) {
+    return c.json({ message: "Error deleting todo", error }, 500);
+  }
+});
+
+
 export default app;
 
 serve(

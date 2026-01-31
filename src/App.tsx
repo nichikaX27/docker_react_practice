@@ -4,7 +4,11 @@ interface Todo {
   id: number;
   title: string;
   completed: boolean;
-};
+}
+
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3000" : "https://docker-react-practice.onrender.com");
+
+
 
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -15,21 +19,26 @@ function App() {
   }, []);
 
   const fetchTodos = async () => {
-    const response = await fetch("https://docker-react-practice.onrender.com/todos");
+    const response = await fetch(
+      `${API_URL}/todos`,
+    );
     const data = await response.json();
     setTodos(data.todos);
   };
 
-  const handleAddTodo =  async () => {
+  const handleAddTodo = async () => {
     if (title.trim()) {
-      try{
-        const response = await fetch("https://docker-react-practice.onrender.com/todos", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+      try {
+        const response = await fetch(
+          `${API_URL}/todos`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ title }),
           },
-          body: JSON.stringify({ title }),
-        });
+        );
         if (response.ok) {
           setTitle("");
           fetchTodos(); // タスクを再取得して表示を更新
@@ -40,22 +49,44 @@ function App() {
     }
   };
 
-  const handleToggleTodo =  async (id: number, completed: boolean) => {
-    try{
-      const response = await fetch(`https://docker-react-practice.onrender.com/todos/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+  const handleToggleTodo = async (id: number, completed: boolean) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/todos/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ completed: !completed }),
         },
-        body: JSON.stringify({completed: !completed}),
-      });
+      );
       if (response.ok) {
         fetchTodos(); // タスクを再取得して表示を更新
       }
     } catch (error) {
       console.error("Error updating todo:", error);
-    }       
+    }
   };
+
+  const handleDeleteTodo = async (id: number) => {
+    if (!confirm("本当にこのタスクを削除しますか？"))  return;
+    try {
+      const response = await fetch(
+        `${API_URL}/todos/${id}`,
+        {
+          method: "DELETE",
+        },
+      );
+      if (response.ok) {
+        fetchTodos(); // タスクを再取得して表示を更新
+      }
+    } catch (error) {
+      console.error("Error deleting todo:", error);
+    }
+  };
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
@@ -114,6 +145,13 @@ function App() {
                   >
                     {todo.title}
                   </span>
+                  <button
+                    onClick={() => handleDeleteTodo(todo.id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                    aria-label="削除"
+                  >
+                    🗑️
+                  </button>
                 </li>
               ))}
             </ul>
