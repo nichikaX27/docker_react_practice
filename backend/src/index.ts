@@ -31,6 +31,19 @@ app.post("/todos", async (c) => {
   })
   return c.json(newTodo );
 })
+
+app.delete("/todos/completed/all", async (c) => {
+  try{
+    const result = await prisma.todo.deleteMany({
+      where: { completed: true },
+    });
+    return c.json({ message: `${result.count} 件の完了したTodoを削除しました。` });
+  }
+  catch (error) {
+    return c.json({ error:　"一括削除に失敗しました" }, 500);
+  }
+});
+
 app.put("/todos/:id", async (c) => {
   const id  =Number(c.req.param("id"));
   const { completed } = await c.req.json();
@@ -52,6 +65,8 @@ app.delete("/todos/:id", async (c) => {
     return c.json({ message: "Error deleting todo", error }, 500);
   }
 });
+
+
 
 
 export default app;

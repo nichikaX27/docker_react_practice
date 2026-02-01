@@ -6,9 +6,11 @@ interface Todo {
   completed: boolean;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3000" : "https://docker-react-practice.onrender.com");
-
-
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV
+    ? "http://localhost:3000"
+    : "https://docker-react-practice.onrender.com");
 
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -19,9 +21,7 @@ function App() {
   }, []);
 
   const fetchTodos = async () => {
-    const response = await fetch(
-      `${API_URL}/todos`,
-    );
+    const response = await fetch(`${API_URL}/todos`);
     const data = await response.json();
     setTodos(data.todos);
   };
@@ -29,16 +29,13 @@ function App() {
   const handleAddTodo = async () => {
     if (title.trim()) {
       try {
-        const response = await fetch(
-          `${API_URL}/todos`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ title }),
+        const response = await fetch(`${API_URL}/todos`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({ title }),
+        });
         if (response.ok) {
           setTitle("");
           fetchTodos(); // タスクを再取得して表示を更新
@@ -51,16 +48,13 @@ function App() {
 
   const handleToggleTodo = async (id: number, completed: boolean) => {
     try {
-      const response = await fetch(
-        `${API_URL}/todos/${id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ completed: !completed }),
+      const response = await fetch(`${API_URL}/todos/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ completed: !completed }),
+      });
       if (response.ok) {
         fetchTodos(); // タスクを再取得して表示を更新
       }
@@ -70,19 +64,32 @@ function App() {
   };
 
   const handleDeleteTodo = async (id: number) => {
-    if (!confirm("本当にこのタスクを削除しますか？"))  return;
+    if (!confirm("本当にこのタスクを削除しますか？")) return;
     try {
-      const response = await fetch(
-        `${API_URL}/todos/${id}`,
-        {
-          method: "DELETE",
-        },
-      );
+      const response = await fetch(`${API_URL}/todos/${id}`, {
+        method: "DELETE",
+      });
       if (response.ok) {
         fetchTodos(); // タスクを再取得して表示を更新
       }
     } catch (error) {
       console.error("Error deleting todo:", error);
+    }
+  };
+
+  const handleclearCompleted = async () => {
+    if (!confirm("完了したタスクをすべて削除しますか？")) return;
+    try {
+      const response = await fetch(`${API_URL}/todos/completed/all`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        fetchTodos(); // タスクを再取得して表示を更新
+      }else {
+        alert("完了したタスクの一括削除に失敗しました。");
+      }
+    } catch (error) {
+      console.error("Error deleting completed todos:", error);
     }
   };
 
@@ -165,6 +172,13 @@ function App() {
               </p>
             </div>
           )}
+          <button
+            onClick={handleclearCompleted}
+            className="mt-4 w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200"
+          >
+            完了したタスクを一括削除
+          </button>
+
         </div>
       </div>
     </div>
