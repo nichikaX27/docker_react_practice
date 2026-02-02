@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Signup from "./Signup";
 
 interface Todo {
   id: number;
@@ -15,7 +16,7 @@ const API_URL =
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [title, setTitle] = useState("");
-
+  const [isSignedUp, setIsSignedUp] = useState(false);
   useEffect(() => {
     fetchTodos();
   }, []);
@@ -93,6 +94,9 @@ function App() {
     }
   };
 
+  if (!isSignedUp) {
+    return <Signup onSignupSuccess={() => setIsSignedUp(true)} />;
+  }
 
 
   return (
@@ -103,6 +107,7 @@ function App() {
             📝 Todoアプリ
           </h1>
 
+        <div className="App">
           <div className="flex gap-2 mb-6">
             <input
               type="text"
@@ -115,11 +120,17 @@ function App() {
             />
             <button
               onClick={handleAddTodo}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+              disabled={!title.trim()}
+              className={`px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 ${
+                !title.trim()
+                  ? "opacity-50 cursor-not-allowed"
+                  : "opacity-100"
+              }`}
             >
               追加
             </button>
           </div>
+        </div>  
 
           {todos.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
@@ -131,7 +142,7 @@ function App() {
               {todos.map((todo) => (
                 <li
                   key={todo.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ${
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all accent-blue-500 duration-300 ease-in-out hover:shadow-md hover:-translate-y-0.5 ${
                     todo.completed
                       ? "bg-gray-50 border-gray-200"
                       : "bg-white border-gray-300 hover:border-blue-300"
@@ -152,6 +163,7 @@ function App() {
                   >
                     {todo.title}
                   </span>
+
                   <button
                     onClick={() => handleDeleteTodo(todo.id)}
                     className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
