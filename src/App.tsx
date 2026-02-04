@@ -16,7 +16,10 @@ const API_URL =
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [title, setTitle] = useState("");
-  const [isSignedUp, setIsSignedUp] = useState(false);
+  const [isSignedUp, setIsSignedUp] = useState(() => {
+    return localStorage.getItem("isLoggedIn") === "true";
+  });
+
   useEffect(() => {
     fetchTodos();
   }, []);

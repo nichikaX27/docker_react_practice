@@ -18,7 +18,9 @@ const Signup = ({ onSignupSuccess }: { onSignupSuccess: () => void }) => {
 
       if (response.ok) {
         setMessage('登録に成功しました！');
-        onSignupSuccess();
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userId', data.userId);
+        onSignupSuccess(); // Call the callback to notify parent component
       } else {
         setMessage(data.error || '登録に失敗しました');
       }
