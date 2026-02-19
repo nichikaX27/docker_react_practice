@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 
-const Signup = ({
-  onSignupSuccess,
+// onLoginSuccess は App.tsx の setIsSignedUp(true) を呼び出すためのもの
+const Login = ({
+  onLoginSuccess,
   onToggleMode,
 }: {
-  onSignupSuccess: () => void;
+  onLoginSuccess: () => void;
   onToggleMode: () => void;
 }) => {
   const [email, setEmail] = useState("");
@@ -14,7 +15,8 @@ const Signup = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:3000/signup", {
+      // 宛先を /login に変更
+      const response = await fetch("http://localhost:3000/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -23,12 +25,14 @@ const Signup = ({
       const data = await response.json();
 
       if (response.ok) {
-        setMessage("登録に成功しました！");
+        setMessage("ログインに成功しました！");
+        // ブラウザの倉庫に保存
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("userId", data.userId);
-        onSignupSuccess(); // Call the callback to notify parent component
+
+        onLoginSuccess(); // 親コンポーネントの状態を更新
       } else {
-        setMessage(data.error || "登録に失敗しました");
+        setMessage(data.error || "ログインに失敗しました");
       }
     } catch (error) {
       setMessage("サーバーとの通信に失敗しました");
@@ -40,10 +44,10 @@ const Signup = ({
       <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-xl">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            新規登録
+            ログイン
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            新しいアカウントを作成して始めましょう
+            アカウントにアクセスしてTodoを管理しましょう
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -68,7 +72,7 @@ const Signup = ({
               <input
                 type="password"
                 required
-                autoComplete="new-password"
+                autoComplete="current-password"
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors duration-200"
                 placeholder="パスワード"
                 value={password}
@@ -82,7 +86,7 @@ const Signup = ({
               type="submit"
               className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md hover:shadow-lg transition-all duration-200"
             >
-              登録する
+              ログイン
             </button>
           </div>
         </form>
@@ -104,13 +108,9 @@ const Signup = ({
             <button
               type="button"
               className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200"
-              onClick={() => {
-                localStorage.removeItem("isLoggedIn");
-                localStorage.removeItem("userId");
-                onToggleMode();
-              }}
+              onClick={onToggleMode}
             >
-              すでにアカウントをお持ちの方はこちら（ログイン）
+              アカウントをお持ちでない方はこちら（新規登録）
             </button>
           </div>
         </div>
@@ -119,4 +119,4 @@ const Signup = ({
   );
 };
 
-export default Signup;
+export default Login;

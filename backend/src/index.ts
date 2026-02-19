@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { compare } from "bcryptjs";
+import { use } from "hono/jsx";
 
 const app = new Hono();
 const prisma = new PrismaClient();
@@ -18,8 +19,9 @@ app.get("/", (c) => {
 
 // TODOリスト取得エンドポイント
 app.get("/todos", async (c) => {
+  const userId = Number(c.req.query("userId"));
   const todos = await prisma.todo.findMany({
-    where: { userId: 1 },
+    where: { userId: userId || 0},
     orderBy: { id: "asc" },
   });
   return c.json({ todos });
@@ -27,7 +29,7 @@ app.get("/todos", async (c) => {
 
 // TODO作成エンドポイント
 app.post("/todos", async (c) => {
-  const { title } = await c.req.json();
+  const { title, userId } = await c.req.json();
 
   if (!title || title.trim() === "") {
     return c.json({ error: "入力がありません" }, 400);
@@ -37,7 +39,7 @@ app.post("/todos", async (c) => {
     data: {
       title,
       completed: false,
-      userId: 1, // 先ほどSQLで作成したユーザーID
+      userId: Number(userId), // 先ほどSQLで作成したユーザーID
     },
   });
   return c.json(newTodo);
@@ -48,7 +50,7 @@ app.delete("/todos/completed/all", async (c) => {
   try {
     const result = await prisma.todo.deleteMany({
       where: {
-        userId: 1, // 自分のTODOだけ消すように制限
+        userId: Number(c.req.query("userId")),
         completed: true,
       },
     });
@@ -63,9 +65,12 @@ app.delete("/todos/completed/all", async (c) => {
 // TODO更新エンドポイント
 app.put("/todos/:id", async (c) => {
   const id = Number(c.req.param("id"));
-  const { completed } = await c.req.json();
-  const updatedTodo = await prisma.todo.update({
-    where: { id },
+  const { completed, userId } = await c.req.json();
+  const updatedTodo = await prisma.todo.updateMany({
+    where: { 
+      id: id,
+      userId: Number(userId), // ユーザーIDも条件に追加},
+    },
     data: { completed },
   });
   return c.json(updatedTodo);
@@ -75,8 +80,11 @@ app.put("/todos/:id", async (c) => {
 app.delete("/todos/:id", async (c) => {
   const id = Number(c.req.param("id"));
   try {
-    await prisma.todo.delete({
-      where: { id },
+    await prisma.todo.deleteMany({
+      where: { 
+        id: id,
+        userId: Number(c.req.query("userId")),
+      },
     });
     return c.json({ message: "Todo deleted successfully" });
   } catch (error) {

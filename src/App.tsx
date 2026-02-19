@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Signup from "./Signup";
+import Login from "./Login";
 
 interface Todo {
   id: number;
@@ -19,18 +20,33 @@ function App() {
   const [isSignedUp, setIsSignedUp] = useState(() => {
     return localStorage.getItem("isLoggedIn") === "true";
   });
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
 
   useEffect(() => {
+    if(isSignedUp) {
     fetchTodos();
-  }, []);
+    }
+  }, [isSignedUp]);
 
-  const fetchTodos = async () => {
-    const response = await fetch(`${API_URL}/todos`);
-    const data = await response.json();
-    setTodos(data.todos);
+  const withAuth = (action: (UserId: string, ...args:any[]) => Promise<void>) => {
+    return async (...args: any[]) => {
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
+        alert("ユーザーIDが見つかりません。ログインしてください。");
+        return;
+      }
+      await action(userId, ...args);
+    };
   };
 
-  const handleAddTodo = async () => {
+
+  const fetchTodos = withAuth(async (userId) => {
+    const response = await fetch(`${API_URL}/todos?userId=${userId}`);
+    const data = await response.json();
+    setTodos(data.todos);
+  });
+
+  const handleAddTodo = withAuth(async (userId) => {
     if (title.trim()) {
       try {
         const response = await fetch(`${API_URL}/todos`, {
@@ -38,7 +54,7 @@ function App() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ title }),
+          body: JSON.stringify({ title, userId }), // ユーザーIDも送信
         });
         if (response.ok) {
           setTitle("");
@@ -48,16 +64,16 @@ function App() {
         console.error("Error adding todo:", error);
       }
     }
-  };
+  });
 
-  const handleToggleTodo = async (id: number, completed: boolean) => {
+  const handleToggleTodo = withAuth(async (userId, id, completed) => {
     try {
       const response = await fetch(`${API_URL}/todos/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ completed: !completed }),
+        body: JSON.stringify({ completed: !completed , userId: userId}), // ユーザーIDも送信
       });
       if (response.ok) {
         fetchTodos(); // タスクを再取得して表示を更新
@@ -65,12 +81,12 @@ function App() {
     } catch (error) {
       console.error("Error updating todo:", error);
     }
-  };
+  });
 
-  const handleDeleteTodo = async (id: number) => {
+  const handleDeleteTodo = withAuth(async(userId, id) => {
     if (!confirm("本当にこのタスクを削除しますか？")) return;
     try {
-      const response = await fetch(`${API_URL}/todos/${id}`, {
+      const response = await fetch(`${API_URL}/todos/${id}?userId=${userId}`, {
         method: "DELETE",
       });
       if (response.ok) {
@@ -79,61 +95,100 @@ function App() {
     } catch (error) {
       console.error("Error deleting todo:", error);
     }
-  };
+  });
 
-  const handleclearCompleted = async () => {
+  const handleclearCompleted = withAuth(async (userId) => {
     if (!confirm("完了したタスクをすべて削除しますか？")) return;
     try {
-      const response = await fetch(`${API_URL}/todos/completed/all`, {
+      const response = await fetch(`${API_URL}/todos/completed/all?userId=${userId}`, {
         method: "DELETE",
       });
       if (response.ok) {
         fetchTodos(); // タスクを再取得して表示を更新
-      }else {
+      } else {
         alert("完了したタスクの一括削除に失敗しました。");
       }
     } catch (error) {
       console.error("Error deleting completed todos:", error);
     }
+  });
+
+  // ログアウト処理
+  const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("userId");
+    setIsSignedUp(false);
   };
 
   if (!isSignedUp) {
-    return <Signup onSignupSuccess={() => setIsSignedUp(true)} />;
-  }
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        {/* フォーム本体 */}
+        <div className="w-full max-w-md">
+          {authMode === "login" ? (
+            <Login onLoginSuccess={() => setIsSignedUp(true)} onToggleMode={() => setAuthMode("signup")} />
+          ) : (
+            <Signup onSignupSuccess={() => setIsSignedUp(true)} onToggleMode={() => setAuthMode("login")} />
+          )}
 
+          {/* 切り替えボタンをフォームのすぐ下に配置 */}
+          <div className="text-center mt-6">
+            <button
+              onClick={() =>
+                setAuthMode(authMode === "login" ? "signup" : "login")
+              }
+              className="text-blue-600 hover:text-blue-800 hover:underline font-medium bg-white/50 px-4 py-2 rounded-full shadow-sm transition-all"
+            >
+              {authMode === "login"
+                ? "アカウント作成はこちら（新規登録）"
+                : "既にアカウントをお持ちの方はこちら（ログイン）"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-md mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-            📝 Todoアプリ
-          </h1>
-
-        <div className="App">
-          <div className="flex gap-2 mb-6">
-            <input
-              type="text"
-              name="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="新しいタスクを入力..."
-              aria-label="新しいタスクを入力"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-            />
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
+              📝 Todoアプリ
+            </h1>
             <button
-              onClick={handleAddTodo}
-              disabled={!title.trim()}
-              className={`px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 ${
-                !title.trim()
-                  ? "opacity-50 cursor-not-allowed"
-                  : "opacity-100"
-              }`}
+              onClick={handleLogout}
+              className="text-xs text-red-400 hover:text-red-600 border border-red-200 px-2 py-1 rounded"
             >
-              追加
+              ログアウト
             </button>
           </div>
-        </div>  
+
+          <div className="App">
+            <div className="flex gap-2 mb-6">
+              <input
+                type="text"
+                name="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="新しいタスクを入力..."
+                aria-label="新しいタスクを入力"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              />
+              <button
+                onClick={handleAddTodo}
+                disabled={!title.trim()}
+                className={`px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 ${
+                  !title.trim()
+                    ? "opacity-50 cursor-not-allowed"
+                    : "opacity-100"
+                }`}
+              >
+                追加
+              </button>
+            </div>
+          </div>
 
           {todos.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
@@ -193,7 +248,6 @@ function App() {
           >
             完了したタスクを一括削除
           </button>
-
         </div>
       </div>
     </div>
