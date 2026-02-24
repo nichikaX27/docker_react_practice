@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Signup from "./Signup";
 import Login from "./Login";
 
@@ -96,7 +96,7 @@ function App() {
     }
   });
 
-  const handleDeleteList = withAuth(async (userId, id) => {
+  const handleDeleteList = withAuth(async (_userId, id) => {
     if (!confirm("本当にこのリストを削除しますか？")) return;
     try {
       const response = await fetch(`${API_URL}/lists/${id}`, {
@@ -115,7 +115,7 @@ function App() {
     }
   });
 
-  const handleAddTodo = withAuth(async (userId) => {
+  const handleAddTodo = withAuth(async (_userId) => {
     try {
       const response = await fetch(`${API_URL}/todos`, {
         method: "POST",
@@ -130,7 +130,7 @@ function App() {
     }
   });
 
-  const handleToggleTodo = withAuth(async (userId, id, completed) => {
+  const handleToggleTodo = withAuth(async (_userId, id, completed) => {
     try {
       const response = await fetch(`${API_URL}/todos/${id}?listId=${currentListId}`, {
         method: "PUT",
@@ -147,7 +147,7 @@ function App() {
     }
   });
 
-  const handleDeleteTodo = withAuth(async (userId, id) => {
+  const handleDeleteTodo = withAuth(async (_userId, id) => {
     if (!confirm("本当にこのタスクを削除しますか？")) return;
     try {
       const response = await fetch(`${API_URL}/todos/${id}?listId=${currentListId}`, {
@@ -161,7 +161,7 @@ function App() {
     }
   });
 
-  const handleclearCompleted = withAuth(async (userId) => {
+  const handleclearCompleted = withAuth(async (_userId) => {
     if (!confirm("完了したタスクをすべて削除しますか？")) return;
     try {
       const response = await fetch(
@@ -286,7 +286,7 @@ function App() {
               onClick={handleAddList}
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors"
             >
-              ＋
+              +
             </button>
           </div>
         </div>

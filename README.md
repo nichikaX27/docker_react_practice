@@ -2,6 +2,32 @@
 Qiita: 【初心者完全版】0からDockerをフルスタックアプリを開発しながら学べるチュートリアル
 https://qiita.com/Sicut_study/items/fd8e8a9fe05631fc5ca8
 
+# アプリ概要
+
+Docker環境上で動作するフルスタックTodoアプリケーションです。
+React (Vite) と Node.js (Hono) を使用し、データベースにはPostgreSQLを採用しています。
+ユーザー認証機能を備えており、ユーザーごとに独自のTodoリストを作成・管理できます。
+
+# 機能
+
+- **ユーザー認証**
+  - 新規登録 (Sign up)
+  - ログイン (Log in)
+  - ログアウト
+
+- **Todoリスト管理**
+  - 複数のリスト作成
+  - リストの削除（確認ダイアログあり）
+  - リストの切り替え
+
+- **タスク（Todo）管理**
+  - タスクの追加
+  - タスクの完了/未完了ステータスの切り替え
+  - タスクの編集（タイトル更新）
+  - 完了したタスクの一括削除
+
+
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
