@@ -15,4 +15,4 @@ RUN npm run build
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma db push && npm run start"]
+CMD ["sh", "-c", "npx prisma db push --force-reset && npm run start"]
