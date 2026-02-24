@@ -17,11 +17,33 @@ app.get("/", (c) => {
   return c.text("Hello Hono!");
 });
 
+// TODOリスト取得エンドポイント（ユーザーIDでフィルタリング）
+app.get("/lists", async (c) => {
+  const userId = Number(c.req.query("userId"));
+  const list = await prisma.todoList.findMany({
+    where: { userId: userId || 0 },
+    include: { _count: { select: { todos: true } } }, // 各リストに関連するTODOの数を取得
+  });
+  return c.json({ list });
+});
+
+// TODOリスト作成エンドポイント
+app.post("/lists", async (c) => {
+  const { name, userId } = await c.req.json();
+  const newList = await prisma.todoList.create({
+    data: {
+      name: name,
+      userId: Number(userId), // ユーザーIDを保存
+    },
+  });
+  return c.json(newList);
+});
+
 // TODOリスト取得エンドポイント
 app.get("/todos", async (c) => {
-  const userId = Number(c.req.query("userId"));
+  const listId = Number(c.req.query("listId"));
   const todos = await prisma.todo.findMany({
-    where: { userId: userId || 0},
+    where: { listId: listId || 0 },
     orderBy: { id: "asc" },
   });
   return c.json({ todos });
@@ -29,28 +51,37 @@ app.get("/todos", async (c) => {
 
 // TODO作成エンドポイント
 app.post("/todos", async (c) => {
-  const { title, userId } = await c.req.json();
-
-  if (!title || title.trim() === "") {
-    return c.json({ error: "入力がありません" }, 400);
-  }
-
+  const { title, listId } = await c.req.json();
   const newTodo = await prisma.todo.create({
     data: {
       title,
       completed: false,
-      userId: Number(userId), // 先ほどSQLで作成したユーザーID
+      listId: Number(listId),
     },
   });
   return c.json(newTodo);
 });
 
+//Todolist削除エンドポイント
+app.delete("/lists/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  try {
+    await prisma.todoList.delete({
+      where: { id },
+    });
+    return c.json({ message: "Todo list deleted successfully" });
+  } catch (error) {
+    return c.json({ message: "Error deleting todo list", error }, 500);
+  }
+});
+
 // 完了したTODO一括削除エンドポイント
 app.delete("/todos/completed/all", async (c) => {
   try {
+    const listId = Number(c.req.query("listId"));
     const result = await prisma.todo.deleteMany({
       where: {
-        userId: Number(c.req.query("userId")),
+        listId: listId,
         completed: true,
       },
     });
@@ -65,15 +96,29 @@ app.delete("/todos/completed/all", async (c) => {
 // TODO更新エンドポイント
 app.put("/todos/:id", async (c) => {
   const id = Number(c.req.param("id"));
-  const { completed, userId } = await c.req.json();
+  const listId = Number(c.req.query("listId"));
+  const {title, completed} = await c.req.json();
+
+  const upDateData: any = {};
+  if (title !== undefined) upDateData.title = title;
+  if (completed !== undefined) upDateData.completed = completed;
+
+  if (Object.keys(upDateData).length === 0) {
+    return c.json({ message: "更新するデータがありません" }, 400);
+  }
+
+  try {
   const updatedTodo = await prisma.todo.updateMany({
-    where: { 
+    where: {
       id: id,
-      userId: Number(userId), // ユーザーIDも条件に追加},
-    },
-    data: { completed },
+      listId: listId, // リストIDも条件に追加
+    }
+    ,data: upDateData,
   });
-  return c.json(updatedTodo);
+  return c.json(updatedTodo);} catch (error) {
+    console.error("Prisma error:", error);
+    return c.json({ message: "Error updating todo", error }, 500);
+  }
 });
 
 // TODO削除エンドポイント
@@ -81,9 +126,9 @@ app.delete("/todos/:id", async (c) => {
   const id = Number(c.req.param("id"));
   try {
     await prisma.todo.deleteMany({
-      where: { 
+      where: {
         id: id,
-        userId: Number(c.req.query("userId")),
+        listId: Number(c.req.query("listId")), // リストIDも条件に追加
       },
     });
     return c.json({ message: "Todo deleted successfully" });
@@ -139,7 +184,11 @@ app.post("/login", async (c) => {
       return c.json({ error: "パスワードが正しくありません" }, 401);
     }
 
-    return c.json({ message: "ログインに成功しました", userId: user.id,email: user.email });
+    return c.json({
+      message: "ログインに成功しました",
+      userId: user.id,
+      email: user.email,
+    });
   } catch (error) {
     return c.json({ error: "ログインに失敗しました" }, 500);
   }

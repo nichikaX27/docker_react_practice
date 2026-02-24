@@ -12,13 +12,24 @@ model User {
   id       Int    @id @default(autoincrement())
   email    String @unique
   password String // ここに bcrypt でハッシュ化した値を保存
-  todos    Todo[] // 1人のユーザーは複数のTodoを持つ（1対多）
+  lists    TodoList[]
+}
+
+model TodoList{
+  id       Int    @id @default(autoincrement())
+  name     String
+  userId   Int     // 誰のTodoかを示す外部キー
+  user     User    @relation(fields: [userId], references: [id])
+  todos    Todo[]
+
 }
 
 model Todo {
   id        Int     @id @default(autoincrement())
   title     String
   completed Boolean @default(false)
-  userId    Int     // 誰のTodoかを示す外部キー
-  user      User    @relation(fields: [userId], references: [id])
+  listId    Int
+  list    TodoList @relation(fields:[listId], references:[id],onDelete:Cascade)
+
 }
+

@@ -1,6 +1,14 @@
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Signup from "./Signup";
 import Login from "./Login";
+
+interface Todolist {
+  id: number;
+  name: string;
+  _count: {
+    todos: number;
+  };
+}
 
 interface Todo {
   id: number;
@@ -16,6 +24,10 @@ const API_URL =
 
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [lists, setLists] = useState<Todolist[]>([]);
+  const [currentListId, setCurrentListId] = useState<number | null>(null);
+  const [newListLabel, setNewListLabel] = useState("");
+
   const [title, setTitle] = useState("");
   const [isSignedUp, setIsSignedUp] = useState(() => {
     return localStorage.getItem("isLoggedIn") === "true";
@@ -23,12 +35,20 @@ function App() {
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
 
   useEffect(() => {
-    if(isSignedUp) {
-    fetchTodos();
+    if (isSignedUp) {
+      fetchLists();
     }
   }, [isSignedUp]);
 
-  const withAuth = (action: (UserId: string, ...args:any[]) => Promise<void>) => {
+  useEffect(() => {
+    if (currentListId !== null) {
+      fetchTodos();
+    }
+  }, [currentListId]);
+
+  const withAuth = (
+    action: (UserId: string, ...args: any[]) => Promise<void>,
+  ) => {
     return async (...args: any[]) => {
       const userId = localStorage.getItem("userId");
       if (!userId) {
@@ -39,58 +59,102 @@ function App() {
     };
   };
 
+  const fetchLists = withAuth(async (userId) => {
+    const response = await fetch(`${API_URL}/lists?userId=${userId}`);
+    const data = await response.json();
+    setLists(data.list);
+    if (data.list.length > 0) {
+      setCurrentListId(data.list[0].id); // 最初のリストを選択
+    }
+  });
 
-  const fetchTodos = withAuth(async (userId) => {
-    const response = await fetch(`${API_URL}/todos?userId=${userId}`);
+  const fetchTodos = withAuth(async (userId, listId?: number) => {
+    const targetId = listId || currentListId;
+    if (!targetId) return;
+    const response = await fetch(
+      `${API_URL}/todos?userId=${userId}&listId=${targetId}`,
+    );
     const data = await response.json();
     setTodos(data.todos);
   });
 
-  const handleAddTodo = withAuth(async (userId) => {
-    if (title.trim()) {
-      try {
-        const response = await fetch(`${API_URL}/todos`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ title, userId }), // ユーザーIDも送信
-        });
-        if (response.ok) {
-          setTitle("");
-          fetchTodos(); // タスクを再取得して表示を更新
-        }
-      } catch (error) {
-        console.error("Error adding todo:", error);
+  const handleAddList = withAuth(async (userId) => {
+    if (!newListLabel.trim()) return;
+    try {
+      const response = await fetch(`${API_URL}/lists`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newListLabel, userId }), // ユーザーIDも送信
+      });
+      if (response.ok) {
+        const newList = await response.json();
+        setLists((prev) => [...prev, newList]);
+        setNewListLabel("");
       }
+    } catch (error) {
+      console.error("Error adding list:", error);
+    }
+  });
+
+  const handleDeleteList = withAuth(async (userId, id) => {
+    if (!confirm("本当にこのリストを削除しますか？")) return;
+    try {
+      const response = await fetch(`${API_URL}/lists/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setLists((prev) => prev.filter((list) => list.id !== id));
+        if (currentListId === id) {
+          setCurrentListId(null); // 削除したリストが現在選択されている場合、選択を解除
+        }
+      } else {
+        alert("リストの削除に失敗しました。");
+      }
+    } catch (error) {
+      console.error("Error deleting list:", error);
+    }
+  });
+
+  const handleAddTodo = withAuth(async (userId) => {
+    try {
+      const response = await fetch(`${API_URL}/todos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, listId: currentListId  }), 
+      });
+      if (response.ok) {
+        fetchTodos(currentListId); // タスクを再取得して表示を更新
+      }
+    } catch (error) {
+      console.error("Error adding todo:", error);
     }
   });
 
   const handleToggleTodo = withAuth(async (userId, id, completed) => {
     try {
-      const response = await fetch(`${API_URL}/todos/${id}`, {
+      const response = await fetch(`${API_URL}/todos/${id}?listId=${currentListId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ completed: !completed , userId: userId}), // ユーザーIDも送信
+        body: JSON.stringify({ completed: !completed, listId: currentListId}), 
       });
       if (response.ok) {
-        fetchTodos(); // タスクを再取得して表示を更新
+        fetchTodos(currentListId); // タスクを再取得して表示を更新
       }
     } catch (error) {
       console.error("Error updating todo:", error);
     }
   });
 
-  const handleDeleteTodo = withAuth(async(userId, id) => {
+  const handleDeleteTodo = withAuth(async (userId, id) => {
     if (!confirm("本当にこのタスクを削除しますか？")) return;
     try {
-      const response = await fetch(`${API_URL}/todos/${id}?userId=${userId}`, {
+      const response = await fetch(`${API_URL}/todos/${id}?listId=${currentListId}`, {
         method: "DELETE",
       });
       if (response.ok) {
-        fetchTodos(); // タスクを再取得して表示を更新
+        fetchTodos(currentListId); // タスクを再取得して表示を更新
       }
     } catch (error) {
       console.error("Error deleting todo:", error);
@@ -100,11 +164,14 @@ function App() {
   const handleclearCompleted = withAuth(async (userId) => {
     if (!confirm("完了したタスクをすべて削除しますか？")) return;
     try {
-      const response = await fetch(`${API_URL}/todos/completed/all?userId=${userId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `${API_URL}/todos/completed/all?listId=${currentListId}`,
+        {
+          method: "DELETE",
+        },
+      );
       if (response.ok) {
-        fetchTodos(); // タスクを再取得して表示を更新
+        fetchTodos(currentListId); // タスクを再取得して表示を更新
       } else {
         alert("完了したタスクの一括削除に失敗しました。");
       }
@@ -126,9 +193,15 @@ function App() {
         {/* フォーム本体 */}
         <div className="w-full max-w-md">
           {authMode === "login" ? (
-            <Login onLoginSuccess={() => setIsSignedUp(true)} onToggleMode={() => setAuthMode("signup")} />
+            <Login
+              onLoginSuccess={() => setIsSignedUp(true)}
+              onToggleMode={() => setAuthMode("signup")}
+            />
           ) : (
-            <Signup onSignupSuccess={() => setIsSignedUp(true)} onToggleMode={() => setAuthMode("login")} />
+            <Signup
+              onSignupSuccess={() => setIsSignedUp(true)}
+              onToggleMode={() => setAuthMode("login")}
+            />
           )}
 
           {/* 切り替えボタンをフォームのすぐ下に配置 */}
@@ -149,41 +222,109 @@ function App() {
     );
   }
 
+  const handleUpdateTitle = withAuth(async (userId, id, title) => {
+    try {
+      const response = await fetch(`${API_URL}/todos/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title, userId }),
+      });
+      if (response.ok) {
+        console.log("Title updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating todo:", error);
+    }
+  });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
-      <div className="max-w-md mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-              📝 Todoアプリ
-            </h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex p-8 gap-6">
+      {/* 📂 左側：サイドバー (リスト一覧) - 30% */}
+      <div className="w-[30%] bg-slate-800 text-white rounded-xl shadow-lg flex flex-col overflow-hidden">
+        <div className="p-6 bg-slate-900">
+          <h2 className="text-xl font-bold flex items-center gap-2">📂 リスト一覧</h2>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {lists.map((list) => (
+            <button
+              key={list.id}
+              onClick={() => setCurrentListId(list.id)}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-all flex justify-between items-center group ${
+                currentListId === list.id 
+                  ? "bg-blue-600 shadow-md transform scale-[1.02]" 
+                  : "hover:bg-slate-700 hover:pl-5"
+              }`}
+            >
+              <span className="truncate font-medium">{list.name}</span>
+              <button 
+              onClick={() => handleDeleteList(list.id)}
+              className="ml-2 text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded">削除</button>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                currentListId === list.id ? "bg-blue-500 text-white" : "bg-slate-700 text-slate-400 group-hover:bg-slate-600"
+              }`}>
+                {list._count?.todos || 0}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* リスト追加フォーム (サイドバー下部) */}
+        <div className="p-4 bg-slate-900 border-t border-slate-700">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newListLabel}
+              onChange={(e) => setNewListLabel(e.target.value)}
+              placeholder="新しいリスト..."
+              className="flex-1 bg-slate-800 border-slate-700 text-white text-sm rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              onKeyDown={(e) => e.key === "Enter" && handleAddList()}
+            />
+            <button
+              onClick={handleAddList}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors"
+            >
+              ＋
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 📝 右側：メインコンテンツ (Todoタスク) - 70% */}
+      <div className="w-[70%] bg-white rounded-xl shadow-lg flex flex-col overflow-hidden">
+        <div className="p-8 h-full overflow-y-auto">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">
+                {lists.find(l => l.id === currentListId)?.name || "Todoアプリ"}
+              </h1>
+              <p className="text-sm text-slate-500 mt-1">
+                ログイン中: <span className="font-medium text-blue-600">{localStorage.getItem("email") || "ユーザー"}</span>
+              </p>
+            </div>
             <button
               onClick={handleLogout}
-              className="text-xs text-red-400 hover:text-red-600 border border-red-200 px-2 py-1 rounded"
+              className="text-sm text-red-500 hover:text-red-700 hover:bg-red-50 border border-red-200 px-4 py-2 rounded-lg transition-colors"
             >
               ログアウト
             </button>
           </div>
 
-          <div className="App">
-            <div className="flex gap-2 mb-6">
+          <div className="mb-8">
+            <div className="flex gap-3">
               <input
-                type="text"
-                name="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="新しいタスクを入力..."
-                aria-label="新しいタスクを入力"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              />
+                 type="text"
+                 value={title}
+                 onChange={(e) => setTitle(e.target.value)}
+                 onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
+                 placeholder="新しいタスクを入力..."
+                 className="flex-1 px-4 py-3 bg-slate-50 text-black border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+               />
               <button
                 onClick={handleAddTodo}
-                disabled={!title.trim()}
-                className={`px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 ${
-                  !title.trim()
-                    ? "opacity-50 cursor-not-allowed"
-                    : "opacity-100"
-                }`}
+                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 "
               >
                 追加
               </button>
@@ -191,40 +332,57 @@ function App() {
           </div>
 
           {todos.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              <p className="text-lg">タスクがありません</p>
-              <p className="text-sm">新しいタスクを追加してください</p>
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+              <span className="text-6xl mb-4">📝</span>
+              <p className="text-lg font-medium">タスクがありません</p>
+              <p className="text-sm">新しいタスクを追加して始めましょう</p>
             </div>
           ) : (
             <ul className="space-y-3">
               {todos.map((todo) => (
                 <li
                   key={todo.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all accent-blue-500 duration-300 ease-in-out hover:shadow-md hover:-translate-y-0.5 ${
+                  className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 group ${
                     todo.completed
-                      ? "bg-gray-50 border-gray-200"
-                      : "bg-white border-gray-300 hover:border-blue-300"
+                      ? "bg-slate-50 border-slate-100"
+                      : "bg-white border-slate-200 hover:border-blue-300 hover:shadow-md"
                   }`}
                 >
+                  <div className="relative flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={todo.completed}
+                      onChange={() => handleToggleTodo(todo.id, todo.completed)}
+                      className="peer appearance-none w-6 h-6 border-2 border-slate-300 rounded-md checked:bg-blue-500 checked:border-blue-500 transition-colors cursor-pointer"
+                    />
+                    <svg className="absolute w-4 h-4 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  
                   <input
-                    type="checkbox"
-                    checked={todo.completed}
-                    onChange={() => handleToggleTodo(todo.id, todo.completed)}
-                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                  />
-                  <span
-                    className={`flex-1 ${
-                      todo.completed
-                        ? "line-through text-gray-500"
-                        : "text-gray-800"
+                    type="text"
+                    value={todo.title}
+                    onChange={(e) => {
+                      const newTodos = todos.map((t) =>
+                        t.id === todo.id ? { ...t, title: e.target.value } : t,
+                      );
+                      setTodos(newTodos);
+                    }}
+                    onBlur={(e) => handleUpdateTitle(todo.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className={`flex-1 bg-transparent focus:outline-none text-lg transition-colors ${
+                      todo.completed ? "text-slate-400 line-through" : "text-slate-700"
                     }`}
-                  >
-                    {todo.title}
-                  </span>
+                  />
 
                   <button
                     onClick={() => handleDeleteTodo(todo.id)}
-                    className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                     aria-label="削除"
                   >
                     🗑️
@@ -235,19 +393,19 @@ function App() {
           )}
 
           {todos.length > 0 && (
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600 text-center">
-                完了済み: {todos.filter((todo) => todo.completed).length} /{" "}
-                {todos.length}
+            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center">
+              <p className="text-sm text-slate-500">
+                <span className="font-medium text-slate-700">{todos.filter(t => t.completed).length}</span> / {todos.length} 完了
               </p>
+              
+              <button
+                onClick={handleclearCompleted}
+                className="text-sm text-red-500 hover:text-red-700 hover:underline px-2 py-1 rounded transition-colors"
+               >
+                完了済みのタスクをすべて削除
+              </button>
             </div>
           )}
-          <button
-            onClick={handleclearCompleted}
-            className="mt-4 w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200"
-          >
-            完了したタスクを一括削除
-          </button>
         </div>
       </div>
     </div>
