@@ -16,11 +16,9 @@ interface Todo {
   completed: boolean;
 }
 
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV
-    ? "http://localhost:3000"
-    : "https://docker-react-practice.onrender.com");
+// App.tsx
+// 環境変数があればそれ、なければ localhost（ローカル開発用）
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
