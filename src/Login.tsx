@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 
+// 環境変数があればそれ、なければ localhost（ローカル開発用）
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 // onLoginSuccess は App.tsx の setIsSignedUp(true) を呼び出すためのもの
 const Login = ({
   onLoginSuccess,
@@ -16,7 +19,7 @@ const Login = ({
     e.preventDefault();
     try {
       // 宛先を /login に変更
-      const response = await fetch("http://localhost:3000/login", {
+      const response = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

@@ -1,5 +1,9 @@
 import React, { useState } from "react";
 
+
+// 環境変数があればそれ、なければ localhost（ローカル開発用）
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 const Signup = ({
   onSignupSuccess,
   onToggleMode,
@@ -14,7 +18,7 @@ const Signup = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:3000/signup", {
+        const response = await fetch(`${API_URL}/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
