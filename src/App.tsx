@@ -238,19 +238,19 @@ function App() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex p-8 gap-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col md:flex-row p-4 md:p-8 gap-4 md:gap-6">
       {/* 📂 左側：サイドバー (リスト一覧) - 30% */}
-      <div className="w-[30%] bg-slate-800 text-white rounded-xl shadow-lg flex flex-col overflow-hidden">
+      <div className="w-full md:w-[30%] bg-slate-800 text-white rounded-xl shadow-lg flex flex-col overflow-hidden">
         <div className="p-6 bg-slate-900">
           <h2 className="text-xl font-bold flex items-center gap-2">📂 リスト一覧</h2>
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {lists.map((list) => (
-            <button
+            <div
               key={list.id}
               onClick={() => setCurrentListId(list.id)}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-all flex justify-between items-center group ${
+              className={`w-full text-left px-4 py-3 rounded-lg transition-all flex justify-between items-center group cursor-pointer ${
                 currentListId === list.id 
                   ? "bg-blue-600 shadow-md transform scale-[1.02]" 
                   : "hover:bg-slate-700 hover:pl-5"
@@ -258,20 +258,23 @@ function App() {
             >
               <span className="truncate font-medium">{list.name}</span>
               <button 
-              onClick={() => handleDeleteList(list.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteList(list.id);
+              }}
               className="ml-2 text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded">削除</button>
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 currentListId === list.id ? "bg-blue-500 text-white" : "bg-slate-700 text-slate-400 group-hover:bg-slate-600"
               }`}>
                 {list._count?.todos || 0}
               </span>
-            </button>
+            </div>
           ))}
         </div>
 
         {/* リスト追加フォーム (サイドバー下部) */}
         <div className="p-4 bg-slate-900 border-t border-slate-700">
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             <input
               type="text"
               value={newListLabel}
@@ -282,7 +285,8 @@ function App() {
             />
             <button
               onClick={handleAddList}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors"
+              className="flex-none flex items-center justify-center w-10 h-10 bg-blue-600 text-white text-2xl font-bold rounded hover:bg-blue-700 transition-colors shrink-0"
+              aria-label="リストを追加"
             >
               +
             </button>
@@ -291,9 +295,9 @@ function App() {
       </div>
 
       {/* 📝 右側：メインコンテンツ (Todoタスク) - 70% */}
-      <div className="w-[70%] bg-white rounded-xl shadow-lg flex flex-col overflow-hidden">
-        <div className="p-8 h-full overflow-y-auto">
-          <div className="flex justify-between items-center mb-8">
+      <div className="w-full md:w-[70%] bg-white rounded-xl shadow-lg flex flex-col overflow-hidden">
+        <div className="p-4 md:p-8 h-full overflow-y-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-800">
                 {lists.find(l => l.id === currentListId)?.name || "Todoアプリ"}
