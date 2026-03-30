@@ -28,9 +28,8 @@ const Signup = ({
 
       if (response.ok) {
         setMessage("登録に成功しました！");
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userId", data.userId);
-        localStorage.setItem("email", email);
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("email", data.email || email);
         onSignupSuccess(); // Call the callback to notify parent component
       } else {
         setMessage(data.error || "登録に失敗しました");

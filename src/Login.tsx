@@ -30,8 +30,7 @@ const Login = ({
       if (response.ok) {
         setMessage("ログインに成功しました！");
         // ブラウザの倉庫に保存
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userId", data.userId);
+        localStorage.setItem("token", data.token);
         localStorage.setItem("email", data.email);
 
         onLoginSuccess(); // 親コンポーネントの状態を更新

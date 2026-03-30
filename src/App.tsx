@@ -20,6 +20,11 @@ interface Todo {
 // 環境変数があればそれ、なければ localhost（ローカル開発用）
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+const getAuthHeaders = () => ({
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
+});
+
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [lists, setLists] = useState<Todolist[]>([]);
@@ -28,7 +33,7 @@ function App() {
 
   const [title, setTitle] = useState("");
   const [isSignedUp, setIsSignedUp] = useState(() => {
-    return localStorage.getItem("isLoggedIn") === "true";
+    return !!localStorage.getItem("token");
   });
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
 
@@ -45,24 +50,25 @@ function App() {
   }, [currentListId]);
 
   const withAuth = (
-    action: (UserId: string, ...args: any[]) => Promise<void>,
+    action: (...args: any[]) => Promise<void>,
   ) => {
     return async (...args: any[]) => {
-      const userId = localStorage.getItem("userId");
-      if (!userId) {
-        alert("ユーザーIDが見つかりません。ログインしてください。");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("ログインしてください。");
+        setIsSignedUp(false);
         return;
       }
-      await action(userId, ...args);
+      await action(...args);
     };
   };
 
-  const fetchLists = withAuth(async (userId) => {
+  const fetchLists = withAuth(async () => {
     // ユーザー切り替え時に前のユーザーのデータを即クリア
     setTodos([]);
     setLists([]);
     setCurrentListId(null);
-    const response = await fetch(`${API_URL}/lists?userId=${userId}`);
+    const response = await fetch(`${API_URL}/lists`, { headers: getAuthHeaders() });
     const data = await response.json();
     setLists(data.list);
     if (data.list.length > 0) {
@@ -70,23 +76,24 @@ function App() {
     }
   });
 
-  const fetchTodos = withAuth(async (userId, listId?: number) => {
+  const fetchTodos = withAuth(async (listId?: number) => {
     const targetId = listId || currentListId;
     if (!targetId) return;
     const response = await fetch(
-      `${API_URL}/todos?userId=${userId}&listId=${targetId}`,
+      `${API_URL}/todos?listId=${targetId}`,
+      { headers: getAuthHeaders() },
     );
     const data = await response.json();
     setTodos(data.todos);
   });
 
-  const handleAddList = withAuth(async (userId) => {
+  const handleAddList = withAuth(async () => {
     if (!newListLabel.trim()) return;
     try {
       const response = await fetch(`${API_URL}/lists`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newListLabel, userId }), // ユーザーIDも送信
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ name: newListLabel }),
       });
       if (response.ok) {
         const newList = await response.json();
@@ -99,11 +106,12 @@ function App() {
     }
   });
 
-  const handleDeleteList = withAuth(async (_userId, id) => {
+  const handleDeleteList = withAuth(async (id) => {
     if (!confirm("本当にこのリストを削除しますか？")) return;
     try {
       const response = await fetch(`${API_URL}/lists/${id}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
       if (response.ok) {
         setLists((prev) => prev.filter((list) => list.id !== id));
@@ -118,7 +126,7 @@ function App() {
     }
   });
 
-  const handleAddTodo = withAuth(async (_userId) => {
+  const handleAddTodo = withAuth(async () => {
     if (!title.trim()) {
       alert("タイトルを入力してください。");
       return;
@@ -130,7 +138,7 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/todos`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ title: title.trim(), listId: currentListId }),
       });
       if (response.ok) {
@@ -145,14 +153,12 @@ function App() {
     }
   });
 
-  const handleToggleTodo = withAuth(async (_userId, id, completed) => {
+  const handleToggleTodo = withAuth(async (id, completed) => {
     try {
       const response = await fetch(`${API_URL}/todos/${id}?listId=${currentListId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ completed: !completed, listId: currentListId}), 
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ completed: !completed }),
       });
       if (response.ok) {
         fetchTodos(currentListId); // タスクを再取得して表示を更新
@@ -162,11 +168,12 @@ function App() {
     }
   });
 
-  const handleDeleteTodo = withAuth(async (_userId, id) => {
+  const handleDeleteTodo = withAuth(async (id) => {
     if (!confirm("本当にこのタスクを削除しますか？")) return;
     try {
       const response = await fetch(`${API_URL}/todos/${id}?listId=${currentListId}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
       if (response.ok) {
         fetchTodos(currentListId); // タスクを再取得して表示を更新
@@ -176,13 +183,14 @@ function App() {
     }
   });
 
-  const handleclearCompleted = withAuth(async (_userId) => {
+  const handleclearCompleted = withAuth(async () => {
     if (!confirm("完了したタスクをすべて削除しますか？")) return;
     try {
       const response = await fetch(
         `${API_URL}/todos/completed/all?listId=${currentListId}`,
         {
           method: "DELETE",
+          headers: getAuthHeaders(),
         },
       );
       if (response.ok) {
@@ -197,8 +205,7 @@ function App() {
 
   // ログアウト処理
   const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("userId");
+    localStorage.removeItem("token");
     localStorage.removeItem("email");
     setIsSignedUp(false);
     setCurrentListId(null);
@@ -242,14 +249,12 @@ function App() {
     );
   }
 
-  const handleUpdateTitle = withAuth(async (_userId, id, title) => {
+  const handleUpdateTitle = withAuth(async (id, title) => {
     if (!title.trim()) return;
     try {
       const response = await fetch(`${API_URL}/todos/${id}?listId=${currentListId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ title: title.trim() }),
       });
       if (!response.ok) {
