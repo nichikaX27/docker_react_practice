@@ -242,17 +242,18 @@ function App() {
     );
   }
 
-  const handleUpdateTitle = withAuth(async (userId, id, title) => {
+  const handleUpdateTitle = withAuth(async (_userId, id, title) => {
+    if (!title.trim()) return;
     try {
-      const response = await fetch(`${API_URL}/todos/${id}`, {
+      const response = await fetch(`${API_URL}/todos/${id}?listId=${currentListId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ title, userId }),
+        body: JSON.stringify({ title: title.trim() }),
       });
-      if (response.ok) {
-        console.log("Title updated successfully");
+      if (!response.ok) {
+        console.error("Title update failed");
       }
     } catch (error) {
       console.error("Error updating todo:", error);
