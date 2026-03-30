@@ -42,6 +42,18 @@ app.post("/lists", async (c) => {
 // TODOリスト取得エンドポイント
 app.get("/todos", async (c) => {
   const listId = Number(c.req.query("listId"));
+  const userId = Number(c.req.query("userId"));
+
+  // listId が指定ユーザーのものか確認（他ユーザーのTODO取得を防ぐ）
+  if (listId && userId) {
+    const list = await prisma.todoList.findFirst({
+      where: { id: listId, userId: userId },
+    });
+    if (!list) {
+      return c.json({ todos: [] });
+    }
+  }
+
   const todos = await prisma.todo.findMany({
     where: { listId: listId || 0 },
     orderBy: { id: "asc" },

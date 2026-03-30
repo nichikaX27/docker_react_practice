@@ -58,6 +58,10 @@ function App() {
   };
 
   const fetchLists = withAuth(async (userId) => {
+    // ユーザー切り替え時に前のユーザーのデータを即クリア
+    setTodos([]);
+    setLists([]);
+    setCurrentListId(null);
     const response = await fetch(`${API_URL}/lists?userId=${userId}`);
     const data = await response.json();
     setLists(data.list);
@@ -194,7 +198,12 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userId");
+    localStorage.removeItem("email");
     setIsSignedUp(false);
+    setCurrentListId(null);
+    setTodos([]);
+    setLists([]);
+    setTitle("");
   };
 
   if (!isSignedUp) {
