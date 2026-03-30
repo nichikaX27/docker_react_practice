@@ -114,14 +114,26 @@ function App() {
   });
 
   const handleAddTodo = withAuth(async (_userId) => {
+    if (!title.trim()) {
+      alert("タイトルを入力してください。");
+      return;
+    }
+    if (!currentListId) {
+      alert("リストを選択してください。");
+      return;
+    }
     try {
       const response = await fetch(`${API_URL}/todos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, listId: currentListId  }), 
+        body: JSON.stringify({ title: title.trim(), listId: currentListId }),
       });
       if (response.ok) {
+        setTitle(""); // 入力欄をクリア
         fetchTodos(currentListId); // タスクを再取得して表示を更新
+      } else {
+        const data = await response.json();
+        alert(data.error || "TODOの追加に失敗しました。");
       }
     } catch (error) {
       console.error("Error adding todo:", error);

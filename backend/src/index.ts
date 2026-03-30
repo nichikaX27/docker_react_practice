@@ -51,15 +51,26 @@ app.get("/todos", async (c) => {
 
 // TODO作成エンドポイント
 app.post("/todos", async (c) => {
-  const { title, listId } = await c.req.json();
-  const newTodo = await prisma.todo.create({
-    data: {
-      title,
-      completed: false,
-      listId: Number(listId),
-    },
-  });
-  return c.json(newTodo);
+  try {
+    const { title, listId } = await c.req.json();
+    if (!title || !title.trim()) {
+      return c.json({ error: "タイトルは必須です" }, 400);
+    }
+    if (!listId) {
+      return c.json({ error: "リストIDは必須です" }, 400);
+    }
+    const newTodo = await prisma.todo.create({
+      data: {
+        title: title.trim(),
+        completed: false,
+        listId: Number(listId),
+      },
+    });
+    return c.json(newTodo);
+  } catch (error) {
+    console.error("Prisma error:", error);
+    return c.json({ error: "TODOの作成に失敗しました", detail: String(error) }, 500);
+  }
 });
 
 //Todolist削除エンドポイント
