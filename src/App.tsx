@@ -91,6 +91,7 @@ function App() {
       if (response.ok) {
         const newList = await response.json();
         setLists((prev) => [...prev, newList]);
+        setCurrentListId(newList.id); // 新規作成したリストを自動選択
         setNewListLabel("");
       }
     } catch (error) {

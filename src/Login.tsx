@@ -32,6 +32,7 @@ const Login = ({
         // ブラウザの倉庫に保存
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("userId", data.userId);
+        localStorage.setItem("email", data.email);
 
         onLoginSuccess(); // 親コンポーネントの状態を更新
       } else {
